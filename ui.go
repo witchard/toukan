@@ -8,24 +8,35 @@ import (
 )
 
 type Lanes struct {
-	lanes  []*tview.List
-	active int
-	flex   *tview.Flex
-	app    *tview.Application
+	lanes    []*tview.List
+	active   int
+	flex     *tview.Flex
+	app      *tview.Application
+	inselect bool
 }
 
 func NewLanes(number int, app *tview.Application) *Lanes {
-	l := &Lanes{make([]*tview.List, number), 0, tview.NewFlex(), app}
+	l := &Lanes{make([]*tview.List, number), 0, tview.NewFlex(), app, false}
 	for i := range l.lanes {
 		l.lanes[i] = tview.NewList()
 		l.lanes[i].ShowSecondaryText(false).SetBorder(true)
 		l.lanes[i].SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			switch event.Key() {
+			case tcell.KeyUp:
+				if l.inselect {
+					l.selected()
+					return nil
+				}
+			case tcell.KeyDown:
+				if l.inselect {
+					l.selected()
+					return nil
+				}
 			case tcell.KeyLeft:
-				l.DecActive()
+				l.decActive()
 				return nil
 			case tcell.KeyRight:
-				l.IncActive()
+				l.incActive()
 				return nil
 			}
 			switch event.Rune() {
@@ -33,6 +44,9 @@ func NewLanes(number int, app *tview.Application) *Lanes {
 				app.Stop()
 			}
 			return event
+		})
+		l.lanes[i].SetSelectedFunc(func(w int, x string, y string, z rune) {
+			l.selected()
 		})
 		for j := 0; j < 10; j++ {
 			l.lanes[i].AddItem(fmt.Sprint("Item ", j), "", 0, nil)
@@ -43,12 +57,27 @@ func NewLanes(number int, app *tview.Application) *Lanes {
 	return l
 }
 
-func (l *Lanes) IncActive() {
+func (l *Lanes) selected() {
+	if l.inselect {
+		l.lanes[l.active].SetSelectedBackgroundColor(tcell.ColorWhite)
+	} else {
+		l.lanes[l.active].SetSelectedBackgroundColor(tcell.ColorGreen)
+	}
+	l.inselect = !l.inselect
+}
+
+func (l *Lanes) incActive() {
+	if l.inselect {
+		l.selected()
+	}
 	l.active++
 	l.setActive()
 }
 
-func (l *Lanes) DecActive() {
+func (l *Lanes) decActive() {
+	if l.inselect {
+		l.selected()
+	}
 	l.active--
 	l.setActive()
 }
