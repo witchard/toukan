@@ -8,6 +8,7 @@ import (
 )
 
 type Lanes struct {
+	content  *Content
 	lanes    []*tview.List
 	active   int
 	flex     *tview.Flex
@@ -15,28 +16,37 @@ type Lanes struct {
 	inselect bool
 }
 
-func NewLanes(number int, app *tview.Application) *Lanes {
-	l := &Lanes{make([]*tview.List, number), 0, tview.NewFlex(), app, false}
-	for i := range l.lanes {
+func NewLanes(content *Content, app *tview.Application) *Lanes {
+	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewFlex(), app, false}
+	for i := 0; i < l.content.GetNumLanes(); i++ {
 		l.lanes[i] = tview.NewList()
 		l.lanes[i].ShowSecondaryText(false).SetBorder(true)
+		l.lanes[i].SetTitle(l.content.GetLaneTitle(i))
 		l.lanes[i].SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			switch event.Key() {
 			case tcell.KeyUp:
 				if l.inselect {
-					l.selected()
+					l.up()
 					return nil
 				}
 			case tcell.KeyDown:
 				if l.inselect {
-					l.selected()
+					l.down()
 					return nil
 				}
 			case tcell.KeyLeft:
-				l.decActive()
+				if l.inselect {
+					l.left()
+				} else {
+					l.decActive()
+				}
 				return nil
 			case tcell.KeyRight:
-				l.incActive()
+				if l.inselect {
+					l.right()
+				} else {
+					l.incActive()
+				}
 				return nil
 			}
 			switch event.Rune() {
@@ -54,8 +64,8 @@ func NewLanes(number int, app *tview.Application) *Lanes {
 				l.selected()
 			}
 		})
-		for j := 0; j < 10; j++ {
-			l.lanes[i].AddItem(fmt.Sprint("Item ", j), "", 0, nil)
+		for _, text := range l.content.GetLaneItems(i) {
+			l.lanes[i].AddItem(text, "", 0, nil)
 		}
 		l.flex.AddItem(l.lanes[i], 0, 1, i == 0)
 	}
@@ -72,38 +82,86 @@ func (l *Lanes) selected() {
 	l.inselect = !l.inselect
 }
 
-func (l *Lanes) incActive() {
-	if l.inselect {
-		l.selected()
+func (l *Lanes) redraw(lane, active int) {
+	l.lanes[lane].Clear()
+	for _, text := range l.content.GetLaneItems(lane) {
+		l.lanes[lane].AddItem(text, "", 0, nil)
 	}
+	l.lanes[lane].SetCurrentItem(normPos(active, l.lanes[lane].GetItemCount()))
+}
+
+func (l *Lanes) up() {
+	currentPos := l.lanes[l.active].GetCurrentItem()
+	newPos := normPos(currentPos-1, l.lanes[l.active].GetItemCount())
+	l.content.MoveItem(l.active, currentPos, l.active, newPos)
+	l.redraw(l.active, newPos)
+}
+
+func (l *Lanes) down() {
+	currentPos := l.lanes[l.active].GetCurrentItem()
+	newPos := normPos(currentPos+1, l.lanes[l.active].GetItemCount())
+	l.content.MoveItem(l.active, currentPos, l.active, newPos)
+	l.redraw(l.active, newPos)
+}
+
+func (l *Lanes) left() {
+	currentPos := l.lanes[l.active].GetCurrentItem()
+	newLane := normPos(l.active-1, len(l.lanes))
+	newPos := l.lanes[newLane].GetCurrentItem()
+	l.content.MoveItem(l.active, currentPos, newLane, newPos)
+	l.redraw(l.active, currentPos)
+	l.redraw(newLane, newPos)
+	l.selected()
+	l.decActive()
+	l.selected()
+}
+
+func (l *Lanes) right() {
+	currentPos := l.lanes[l.active].GetCurrentItem()
+	newLane := normPos(l.active+1, len(l.lanes))
+	newPos := l.lanes[newLane].GetCurrentItem()
+	l.content.MoveItem(l.active, currentPos, newLane, newPos)
+	l.redraw(l.active, currentPos)
+	l.redraw(newLane, newPos)
+	l.selected()
+	l.incActive()
+	l.selected()
+
+}
+
+func (l *Lanes) decActive() {
+	l.active--
+	l.setActive()
+}
+
+func (l *Lanes) incActive() {
 	l.active++
 	l.setActive()
 }
 
-func (l *Lanes) decActive() {
-	if l.inselect {
-		l.selected()
+func normPos(pos, length int) int {
+	for pos < 0 {
+		pos += length
 	}
-	l.active--
-	l.setActive()
+	pos %= length
+	return pos
+}
+
+func (l *Lanes) setActive() {
+	l.active = normPos(l.active, len(l.lanes))
+	l.app.SetFocus(l.lanes[l.active])
 }
 
 func (l *Lanes) GetUi() *tview.Flex {
 	return l.flex
 }
 
-func (l *Lanes) setActive() {
-	for l.active < 0 {
-		l.active += len(l.lanes)
-	}
-	l.active %= len(l.lanes)
-	l.app.SetFocus(l.lanes[l.active])
-}
-
 func main() {
+	content := NewContent()
+
 	app := tview.NewApplication()
 
-	lanes := NewLanes(3, app)
+	lanes := NewLanes(content, app)
 
 	pages := tview.NewPages().
 		AddPage("TouKan", lanes.GetUi(), true, true)
