@@ -48,6 +48,12 @@ func NewLanes(number int, app *tview.Application) *Lanes {
 		l.lanes[i].SetSelectedFunc(func(w int, x string, y string, z rune) {
 			l.selected()
 		})
+		l.lanes[i].SetDoneFunc(func() {
+			// Cancel select on Done (escape)
+			if l.inselect {
+				l.selected()
+			}
+		})
 		for j := 0; j < 10; j++ {
 			l.lanes[i].AddItem(fmt.Sprint("Item ", j), "", 0, nil)
 		}
