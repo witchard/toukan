@@ -11,13 +11,15 @@ type Lanes struct {
 	content  *Content
 	lanes    []*tview.List
 	active   int
-	flex     *tview.Flex
+	pages    *tview.Pages
 	app      *tview.Application
 	inselect bool
 }
 
 func NewLanes(content *Content, app *tview.Application) *Lanes {
-	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewFlex(), app, false}
+	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewPages(), app, false}
+
+	flex := tview.NewFlex()
 	for i := 0; i < l.content.GetNumLanes(); i++ {
 		l.lanes[i] = tview.NewList()
 		l.lanes[i].ShowSecondaryText(false).SetBorder(true)
@@ -51,7 +53,7 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 			}
 			switch event.Rune() {
 			case 'q':
-				app.Stop()
+				l.pages.ShowPage("quit")
 			}
 			return event
 		})
@@ -67,8 +69,21 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 		for _, text := range l.content.GetLaneItems(i) {
 			l.lanes[i].AddItem(text, "", 0, nil)
 		}
-		l.flex.AddItem(l.lanes[i], 0, 1, i == 0)
+		flex.AddItem(l.lanes[i], 0, 1, i == 0)
 	}
+	l.pages.AddPage("lanes", flex, true, true)
+
+	quit := tview.NewModal().
+		SetText("Do you want to quit the application?").
+		AddButtons([]string{"Quit", "Cancel"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Quit" {
+				app.Stop()
+			} else {
+				l.pages.HidePage("quit")
+			}
+		})
+	l.pages.AddPage("quit", quit, false, false)
 
 	return l
 }
@@ -152,8 +167,8 @@ func (l *Lanes) setActive() {
 	l.app.SetFocus(l.lanes[l.active])
 }
 
-func (l *Lanes) GetUi() *tview.Flex {
-	return l.flex
+func (l *Lanes) GetUi() *tview.Pages {
+	return l.pages
 }
 
 func main() {
@@ -163,9 +178,7 @@ func main() {
 
 	lanes := NewLanes(content, app)
 
-	pages := tview.NewPages().
-		AddPage("TouKan", lanes.GetUi(), true, true)
-	app.SetRoot(pages, true)
+	app.SetRoot(lanes.GetUi(), true)
 
 	if err := app.Run(); err != nil {
 		fmt.Printf("Error running application: %s\n", err)
