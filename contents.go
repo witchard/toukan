@@ -42,3 +42,7 @@ func (c *Content) MoveItem(fromlane, fromidx, tolane, toidx int) {
 	c.items[fromlane] = append(c.items[fromlane][:fromidx], c.items[fromlane][fromidx+1:]...)
 	c.items[tolane] = append(c.items[tolane][:toidx], append([]string{item}, c.items[tolane][toidx:]...)...)
 }
+
+func (c *Content) DelItem(lane, idx int) {
+	c.items[lane] = append(c.items[lane][:idx], c.items[lane][idx+1:]...)
+}

@@ -54,6 +54,8 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 			switch event.Rune() {
 			case 'q':
 				l.pages.ShowPage("quit")
+			case 'd':
+				l.pages.ShowPage("delete")
 			}
 			return event
 		})
@@ -79,11 +81,23 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Quit" {
 				app.Stop()
-			} else {
-				l.pages.HidePage("quit")
 			}
+			l.pages.HidePage("quit")
 		})
 	l.pages.AddPage("quit", quit, false, false)
+
+	delete := tview.NewModal().
+		SetText("Are you sure?").
+		AddButtons([]string{"Yes", "No"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			if buttonLabel == "Yes" {
+				item := l.lanes[l.active].GetCurrentItem()
+				l.content.DelItem(l.active, item)
+				l.redraw(l.active, item)
+			}
+			l.pages.HidePage("delete")
+		})
+	l.pages.AddPage("delete", delete, false, false)
 
 	return l
 }
