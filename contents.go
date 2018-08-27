@@ -46,3 +46,7 @@ func (c *Content) MoveItem(fromlane, fromidx, tolane, toidx int) {
 func (c *Content) DelItem(lane, idx int) {
 	c.items[lane] = append(c.items[lane][:idx], c.items[lane][idx+1:]...)
 }
+
+func (c *Content) AddItem(lane, idx int, text string) {
+	c.items[lane] = append(c.items[lane][:idx], append([]string{text}, c.items[lane][idx:]...)...)
+}
