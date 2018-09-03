@@ -9,6 +9,7 @@ Keys:
 * a: Add item
 * d: Delete item
 * q: Quit
+* Enter: Select / deselect item (selected items can be moved)
 * Arrows: Move around
 * Tab: Move in forms
 
