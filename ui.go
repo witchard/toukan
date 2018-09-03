@@ -14,11 +14,10 @@ type Lanes struct {
 	pages    *tview.Pages
 	app      *tview.Application
 	inselect bool
-	newText  string
 }
 
 func NewLanes(content *Content, app *tview.Application) *Lanes {
-	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewPages(), app, false, ""}
+	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewPages(), app, false}
 
 	flex := tview.NewFlex()
 	for i := 0; i < l.content.GetNumLanes(); i++ {
@@ -102,35 +101,15 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 		})
 	l.pages.AddPage("delete", delete, false, false)
 
-	// TODO center this box
-	addForm := tview.NewForm().
-		SetButtonsAlign(tview.AlignCenter).
-		SetButtonBackgroundColor(tview.Styles.PrimitiveBackgroundColor).
-		SetButtonTextColor(tview.Styles.PrimaryTextColor)
-	addForm.SetBackgroundColor(tview.Styles.ContrastBackgroundColor).
-		SetBorderPadding(0, 0, 0, 0)
-	addForm.AddInputField("Item", "", 50, nil, func(text string) {
-		l.newText = text
-	})
-	addForm.AddButton("Add", func() {
-		item := l.lanes[l.active].GetCurrentItem()
-		l.content.AddItem(l.active, item, l.newText)
-		l.redraw(l.active, item)
-		l.pages.HidePage("add")
-		// Reset the input field, otherwise it retains the input
-		addForm.Clear(false)
-		addForm.AddInputField("Item", "", 50, nil, func(text string) {
-			l.newText = text
-		})
-	})
-	addForm.AddButton("Cancel", func() {
+	add := NewModalInput()
+	add.SetDoneFunc(func(text string, success bool) {
+		if success {
+			item := l.lanes[l.active].GetCurrentItem()
+			l.content.AddItem(l.active, item, text)
+			l.redraw(l.active, item)
+		}
 		l.pages.HidePage("add")
 	})
-	add := tview.NewFrame(addForm).SetBorders(0, 0, 1, 0, 0, 0)
-	add.SetBorder(true).
-		SetBackgroundColor(tview.Styles.ContrastBackgroundColor).
-		SetBorderPadding(1, 1, 1, 1)
-	add.SetRect(0, 0, 50, 7)
 	l.pages.AddPage("add", add, false, false)
 
 	return l
