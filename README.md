@@ -2,4 +2,13 @@
 
 A simple Kanban board for your terminal.
 
-This is currently a work in progress, the intention is for a simple SQLite database to store the items and the lanes.
+Stores data in a simple JSON document in $HOME/.toukan.json.
+
+Keys:
+
+* a: Add item
+* d: Delete item
+* q: Quit
+* Arrows: Move around
+* Tab: Move in forms
+

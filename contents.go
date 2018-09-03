@@ -1,52 +1,60 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"io"
 )
 
 type Content struct {
-	items  [][]string
-	titles []string
+	Titles []string
+	Items  [][]string
 }
 
-func NewContent() *Content {
-	ret := &Content{}
-	ret.items = make([][]string, 3)
-	for i := range ret.items {
-		ret.items[i] = make([]string, 10)
-		for j := range ret.items[i] {
-			ret.items[i][j] = fmt.Sprint("Item ", j)
-		}
+func NewContentIo(r io.Reader) *Content {
+	decoder := json.NewDecoder(r)
+	c := &Content{}
+	if err := decoder.Decode(c); err != nil {
+		return nil
 	}
+	return c
+}
 
-	ret.titles = []string{"To Do", "Doing", "Done"}
-
+func NewContentDefault() *Content {
+	ret := &Content{}
+	ret.Titles = []string{"To Do", "Doing", "Done"}
+	ret.Items = make([][]string, 3)
 	return ret
 }
 
 func (c *Content) GetNumLanes() int {
-	return len(c.titles)
+	return len(c.Titles)
 }
 
 func (c *Content) GetLaneTitle(idx int) string {
-	return c.titles[idx]
+	return c.Titles[idx]
 }
 
 func (c *Content) GetLaneItems(idx int) []string {
-	return c.items[idx]
+	return c.Items[idx]
 }
 
 func (c *Content) MoveItem(fromlane, fromidx, tolane, toidx int) {
-	item := c.items[fromlane][fromidx]
+	item := c.Items[fromlane][fromidx]
 	// https://github.com/golang/go/wiki/SliceTricks
-	c.items[fromlane] = append(c.items[fromlane][:fromidx], c.items[fromlane][fromidx+1:]...)
-	c.items[tolane] = append(c.items[tolane][:toidx], append([]string{item}, c.items[tolane][toidx:]...)...)
+	c.Items[fromlane] = append(c.Items[fromlane][:fromidx], c.Items[fromlane][fromidx+1:]...)
+	c.Items[tolane] = append(c.Items[tolane][:toidx], append([]string{item}, c.Items[tolane][toidx:]...)...)
 }
 
 func (c *Content) DelItem(lane, idx int) {
-	c.items[lane] = append(c.items[lane][:idx], c.items[lane][idx+1:]...)
+	c.Items[lane] = append(c.Items[lane][:idx], c.Items[lane][idx+1:]...)
 }
 
 func (c *Content) AddItem(lane, idx int, text string) {
-	c.items[lane] = append(c.items[lane][:idx], append([]string{text}, c.items[lane][idx:]...)...)
+	c.Items[lane] = append(c.Items[lane][:idx], append([]string{text}, c.Items[lane][idx:]...)...)
+}
+
+func (c *Content) Save(w io.Writer) {
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(c)
 }

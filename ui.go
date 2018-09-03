@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
@@ -196,18 +194,4 @@ func (l *Lanes) setActive() {
 
 func (l *Lanes) GetUi() *tview.Pages {
 	return l.pages
-}
-
-func main() {
-	content := NewContent()
-
-	app := tview.NewApplication()
-
-	lanes := NewLanes(content, app)
-
-	app.SetRoot(lanes.GetUi(), true)
-
-	if err := app.Run(); err != nil {
-		fmt.Printf("Error running application: %s\n", err)
-	}
 }
