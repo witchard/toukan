@@ -96,6 +96,7 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 				l.redraw(l.active, item)
 			}
 			l.pages.HidePage("delete")
+			l.setActive()
 		})
 	l.pages.AddPage("delete", delete, false, false)
 
@@ -107,6 +108,7 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 			l.redraw(l.active, item)
 		}
 		l.pages.HidePage("add")
+		l.setActive()
 	})
 	l.pages.AddPage("add", add, false, false)
 
@@ -127,7 +129,10 @@ func (l *Lanes) redraw(lane, active int) {
 	for _, text := range l.content.GetLaneItems(lane) {
 		l.lanes[lane].AddItem(text, "", 0, nil)
 	}
-	l.lanes[lane].SetCurrentItem(normPos(active, l.lanes[lane].GetItemCount()))
+	num := l.lanes[lane].GetItemCount()
+	if num > 0 {
+		l.lanes[lane].SetCurrentItem(normPos(active, num))
+	}
 }
 
 func (l *Lanes) up() {
