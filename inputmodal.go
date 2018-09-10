@@ -29,12 +29,6 @@ func NewModalInput() *ModalInput {
 		if m.done != nil {
 			m.done(m.text, true) // Passed
 		}
-
-		// Reset the input field, otherwise it retains the input
-		m.Clear(false)
-		m.AddInputField("", "", 50, nil, func(text string) {
-			m.text = text
-		})
 	})
 	m.AddButton("Cancel", func() {
 		if m.done != nil {
@@ -47,6 +41,14 @@ func NewModalInput() *ModalInput {
 		SetBorderPadding(1, 1, 1, 1)
 
 	return m
+}
+
+// SetValue sets the current value in the item
+func (m *ModalInput) SetValue(text string) {
+	m.Clear(false)
+	m.AddInputField("", text, 50, nil, func(text string) {
+		m.text = text
+	})
 }
 
 // SetDoneFunc sets the done func for this input.

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
+	"os/exec"
+
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
@@ -12,10 +16,12 @@ type Lanes struct {
 	pages    *tview.Pages
 	app      *tview.Application
 	inselect bool
+	add      *ModalInput
+	edit     *ModalInput
 }
 
 func NewLanes(content *Content, app *tview.Application) *Lanes {
-	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewPages(), app, false}
+	l := &Lanes{content, make([]*tview.List, content.GetNumLanes()), 0, tview.NewPages(), app, false, NewModalInput(), NewModalInput()}
 
 	flex := tview.NewFlex()
 	for i := 0; i < l.content.GetNumLanes(); i++ {
@@ -55,7 +61,15 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 			case 'd':
 				l.pages.ShowPage("delete")
 			case 'a':
+				l.add.SetValue("")
 				l.pages.ShowPage("add")
+			case 'e':
+				if item := l.currentItem(); item != nil {
+					l.edit.SetValue(item.Title)
+					l.pages.ShowPage("edit")
+				}
+			case 'n':
+				app.Suspend(l.editNote)
 			}
 			return event
 		})
@@ -68,8 +82,8 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 				l.selected()
 			}
 		})
-		for _, text := range l.content.GetLaneItems(i) {
-			l.lanes[i].AddItem(text, "", 0, nil)
+		for _, item := range l.content.GetLaneItems(i) {
+			l.lanes[i].AddItem(item.Title, "", 0, nil)
 		}
 		flex.AddItem(l.lanes[i], 0, 1, i == 0)
 	}
@@ -100,8 +114,7 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 		})
 	l.pages.AddPage("delete", delete, false, false)
 
-	add := NewModalInput()
-	add.SetDoneFunc(func(text string, success bool) {
+	l.add.SetDoneFunc(func(text string, success bool) {
 		if success {
 			item := l.lanes[l.active].GetCurrentItem()
 			l.content.AddItem(l.active, item, text)
@@ -110,7 +123,19 @@ func NewLanes(content *Content, app *tview.Application) *Lanes {
 		l.pages.HidePage("add")
 		l.setActive()
 	})
-	l.pages.AddPage("add", add, false, false)
+	l.pages.AddPage("add", l.add, false, false)
+
+	l.edit.SetDoneFunc(func(text string, success bool) {
+		if success {
+			item := l.lanes[l.active].GetCurrentItem()
+			itemVal := l.currentItem()
+			itemVal.Title = text
+			l.redraw(l.active, item)
+		}
+		l.pages.HidePage("edit")
+		l.setActive()
+	})
+	l.pages.AddPage("edit", l.edit, false, false)
 
 	return l
 }
@@ -126,8 +151,8 @@ func (l *Lanes) selected() {
 
 func (l *Lanes) redraw(lane, active int) {
 	l.lanes[lane].Clear()
-	for _, text := range l.content.GetLaneItems(lane) {
-		l.lanes[lane].AddItem(text, "", 0, nil)
+	for _, item := range l.content.GetLaneItems(lane) {
+		l.lanes[lane].AddItem(item.Title, "", 0, nil)
 	}
 	num := l.lanes[lane].GetItemCount()
 	if num > 0 {
@@ -195,6 +220,39 @@ func normPos(pos, length int) int {
 func (l *Lanes) setActive() {
 	l.active = normPos(l.active, len(l.lanes))
 	l.app.SetFocus(l.lanes[l.active])
+}
+
+func (l *Lanes) currentItem() *Item {
+	pos := l.lanes[l.active].GetCurrentItem()
+	content := l.content.GetLaneItems(l.active)
+	if pos < 0 || pos >= len(content) {
+		return nil
+	}
+	return &content[pos]
+}
+
+func (l *Lanes) editNote() {
+	item := l.currentItem()
+	if item != nil {
+		tmp, err := ioutil.TempFile("", "toukan")
+		if err == nil {
+			name := tmp.Name()
+			defer os.Remove(name)
+			tmp.Write([]byte(item.Note))
+			tmp.Close()
+			cmd := exec.Command("vim", name)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err == nil {
+				note_raw, err := ioutil.ReadFile(name)
+				if err == nil {
+					item.Note = string(note_raw)
+				}
+			}
+		}
+	}
 }
 
 func (l *Lanes) GetUi() *tview.Pages {

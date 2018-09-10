@@ -8,6 +8,8 @@ Keys:
 
 * a: Add item
 * d: Delete item
+* e: Edit item
+* n: View/edit notes for item
 * q: Quit
 * Enter: Select / deselect item (selected items can be moved)
 * Arrows: Move around
